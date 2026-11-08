@@ -1,0 +1,31 @@
+name: Publish approved product guide
+on:
+  push:
+    paths: ['.github/workflows/publish-guide.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import approved English edition
+        run: |
+          python - <<'PY'
+          import pathlib,re,urllib.request
+          url='https://raw.githubusercontent.com/IndexResearch-ru/IndexResearch-ru.github.io/8d2f5c810d399cb4742c16cad7d95dff631766b9/publication-packages/product-selections/gifts-toys-girls-7-years-2026/en/README.md'
+          text=urllib.request.urlopen(url,timeout=30).read().decode('utf-8')
+          assert len(text)>20000 and text.count('![')==8
+          assert len(set(re.findall(r'https://market\.yandex\.ru/cc/[^\s)<>]+',text)))==8
+          pathlib.Path('README.md').write_text(text,encoding='utf-8')
+          print('English README verified:',len(text),'characters; eight complete product entries.')
+          PY
+      - name: Commit publication
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Publish complete English product selection 1.0.0'
+          git push
